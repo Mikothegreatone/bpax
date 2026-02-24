@@ -1,0 +1,83 @@
+{
+  "name": "BPAX Conformance Test Suite",
+  "version": "0.1-alpha",
+  "description": "Language-agnostic test cases for BPAX validators",
+  "tests": [
+    {
+      "id": "valid-001",
+      "description": "Minimal valid BPAX document",
+      "file": "valid/minimal.json",
+      "expected": {
+        "valid": true,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "valid-002",
+      "description": "Full-featured BPAX document with all blocks",
+      "file": "valid/full-featured.json",
+      "expected": {
+        "valid": true,
+        "errors": [],
+        "warnings": []
+      }
+    },
+    {
+      "id": "invalid-001",
+      "description": "Missing required bpax_version",
+      "file": "invalid/missing-bpax-version.json",
+      "expected": {
+        "valid": false,
+        "errors": [
+          {
+            "code": "SCHEMA_REQUIRED",
+            "path": "/bpax_version"
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid-002",
+      "description": "Invalid step type",
+      "file": "invalid/invalid-step-type.json",
+      "expected": {
+        "valid": false,
+        "errors": [
+          {
+            "code": "SCHEMA_ENUM",
+            "path": "/steps/0/type"
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid-003",
+      "description": "Missing required steps array",
+      "file": "invalid/missing-steps.json",
+      "expected": {
+        "valid": false,
+        "errors": [
+          {
+            "code": "SCHEMA_REQUIRED",
+            "path": "/steps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid-004",
+      "description": "Invalid role ID format",
+      "file": "invalid/invalid-role-id.json",
+      "expected": {
+        "valid": false,
+        "errors": [
+          {
+            "code": "SCHEMA_PATTERN",
+            "path": "/roles/0/id"
+          }
+        ]
+      }
+    }
+  ]
+}

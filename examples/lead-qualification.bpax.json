@@ -1,0 +1,770 @@
+{
+  "bpax_version": "0.1-alpha",
+  "id": "lead-qualification",
+  "name": "Lead Qualification Workflow",
+  "description": "Automated prospect research and qualification with human-in-loop for high-value leads",
+  "version": "1.0.0",
+  "created_at": "2026-02-24T00:00:00Z",
+  "author": {
+    "name": "Sales Operations",
+    "organization": "BPAX Examples"
+  },
+
+  "metadata": {
+    "domain": "sales",
+    "trigger": {
+      "type": "event",
+      "config": {
+        "event_type": "new_lead_created"
+      }
+    },
+    "criticality": "high",
+    "estimated_duration_minutes": 15,
+    "tags": ["sales", "qualification", "outbound", "crm"]
+  },
+
+  "roles": [
+    {
+      "id": "role_researcher",
+      "type": "agent",
+      "name": "Prospect Research Agent",
+      "description": "Researches companies and contacts to gather intelligence",
+      "responsibilities": [
+        "Research company information",
+        "Find contact background",
+        "Identify pain points",
+        "Score ICP fit"
+      ],
+      "agent_config": {
+        "model_preference": ["claude-sonnet-4-20250514", "gpt-4o"],
+        "autonomy_level": "supervised",
+        "temperature": 0.3,
+        "max_tokens": 2000
+      }
+    },
+    {
+      "id": "role_sales_rep",
+      "type": "human",
+      "name": "Sales Representative",
+      "description": "Reviews high-value prospects and approves outreach",
+      "responsibilities": [
+        "Review AI research",
+        "Approve or modify outreach",
+        "Handle relationship decisions"
+      ],
+      "human_config": {
+        "notification_channel": "slack",
+        "escalation_contact": "sales-manager@company.com"
+      }
+    },
+    {
+      "id": "role_crm",
+      "type": "system",
+      "name": "Salesforce CRM",
+      "description": "CRM system for lead management",
+      "system_config": {
+        "interface": "api",
+        "connection_ref": "salesforce_connection"
+      }
+    }
+  ],
+
+  "tools": [
+    {
+      "id": "tool_web_search",
+      "name": "Web Search",
+      "description": "Search the web for company and contact information",
+      "type": "search",
+      "provider": "tavily",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" }
+        },
+        "required": ["query"]
+      },
+      "auth": {
+        "method": "api_key",
+        "secret_ref": "TAVILY_API_KEY"
+      },
+      "assigned_to": ["role_researcher"],
+      "annotations": {
+        "read_only": true,
+        "open_world": true
+      },
+      "rate_limit": {
+        "requests_per_minute": 20,
+        "on_limit": "queue"
+      }
+    },
+    {
+      "id": "tool_crm_read",
+      "name": "CRM Read",
+      "description": "Read lead and account data from CRM",
+      "type": "api",
+      "provider": "salesforce",
+      "endpoint": "/services/data/v59.0/sobjects/Lead",
+      "method": "GET",
+      "auth": {
+        "method": "oauth2",
+        "secret_ref": "SALESFORCE_TOKEN",
+        "oauth_config": {
+          "token_url": "https://login.salesforce.com/services/oauth2/token",
+          "scopes": ["api", "refresh_token"]
+        }
+      },
+      "assigned_to": ["role_researcher"],
+      "annotations": {
+        "read_only": true
+      }
+    },
+    {
+      "id": "tool_crm_write",
+      "name": "CRM Write",
+      "description": "Update lead data in CRM",
+      "type": "api",
+      "provider": "salesforce",
+      "endpoint": "/services/data/v59.0/sobjects/Lead",
+      "method": "PATCH",
+      "auth": {
+        "method": "oauth2",
+        "secret_ref": "SALESFORCE_TOKEN"
+      },
+      "assigned_to": ["role_researcher"],
+      "requires_approval": false,
+      "annotations": {
+        "read_only": false,
+        "idempotent": true
+      }
+    },
+    {
+      "id": "tool_email_send",
+      "name": "Send Email",
+      "description": "Send email to prospect",
+      "type": "communication",
+      "provider": "sendgrid",
+      "auth": {
+        "method": "api_key",
+        "secret_ref": "SENDGRID_API_KEY"
+      },
+      "assigned_to": ["role_researcher"],
+      "requires_approval": {
+        "role": "role_sales_rep",
+        "type": "explicit"
+      },
+      "annotations": {
+        "destructive": true
+      }
+    }
+  ],
+
+  "context": {
+    "inputs": [
+      {
+        "id": "input_lead_id",
+        "name": "Lead ID",
+        "type": "string",
+        "required": true,
+        "example": "00Q5e000001abc123"
+      },
+      {
+        "id": "input_company_domain",
+        "name": "Company Domain",
+        "type": "string",
+        "required": true,
+        "example": "acmecorp.com"
+      },
+      {
+        "id": "input_contact_name",
+        "name": "Contact Name",
+        "type": "string",
+        "required": true,
+        "example": "Jane Smith"
+      },
+      {
+        "id": "input_contact_email",
+        "name": "Contact Email",
+        "type": "string",
+        "required": true,
+        "sensitive": true,
+        "example": "jane@acmecorp.com"
+      }
+    ],
+    "memory": {
+      "type": "session",
+      "store": "redis",
+      "keys": ["prospect_profile", "prior_interactions"],
+      "ttl_hours": 24
+    },
+    "knowledge_bases": [
+      {
+        "id": "kb_product_docs",
+        "name": "Product Documentation",
+        "type": "rag",
+        "source": "s3://company-bucket/product-docs",
+        "relevance_threshold": 0.75,
+        "max_results": 5
+      },
+      {
+        "id": "kb_icp_criteria",
+        "name": "ICP Criteria",
+        "type": "structured_db",
+        "source": "postgres://db/icp_criteria"
+      }
+    ]
+  },
+
+  "steps": [
+    {
+      "id": "step_research_prospect",
+      "name": "Research Prospect",
+      "description": "Gather intelligence on the prospect company and contact",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Research the company at {input_company_domain}.\n\nFind:\n- Company size and structure\n- Tech stack signals (from job postings, case studies)\n- Recent news and developments\n- Likely pain points relevant to our product\n- The contact {input_contact_name}'s role, tenure, and background\n\nBe thorough but efficient. Focus on information that helps qualify this lead.",
+      "tools_available": ["tool_web_search", "tool_crm_read"],
+      "inputs": ["input_company_domain", "input_contact_name"],
+      "output": {
+        "id": "output_prospect_profile",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "company_size": { "type": "string" },
+            "tech_stack": { "type": "array", "items": { "type": "string" } },
+            "recent_news": { "type": "array", "items": { "type": "string" } },
+            "pain_points": { "type": "array", "items": { "type": "string" } },
+            "contact_background": { "type": "string" },
+            "research_confidence": { "type": "number" }
+          },
+          "required": ["company_size", "pain_points", "research_confidence"]
+        }
+      },
+      "confidence": {
+        "threshold": 0.7,
+        "on_low_confidence": "escalate_to_human",
+        "escalation_role": "role_sales_rep"
+      },
+      "timeout_minutes": 5,
+      "retry": {
+        "max_attempts": 2,
+        "backoff": "exponential",
+        "initial_delay_seconds": 10
+      },
+      "on_success": "step_score_icp",
+      "on_failure": "step_handle_research_failure",
+      "cost_config": {
+        "budget_usd": 0.25,
+        "track_tokens": true,
+        "on_overrun": "warn"
+      }
+    },
+    {
+      "id": "step_score_icp",
+      "name": "Score ICP Fit",
+      "description": "Evaluate how well the prospect matches our Ideal Customer Profile",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Based on the prospect profile, score their ICP fit from 1-10.\n\nUse these criteria from our ICP definition:\n- Company size: 50-500 employees preferred\n- Industry: SaaS, fintech, or e-commerce\n- Tech stack: Modern cloud infrastructure\n- Pain points: Alignment with our product capabilities\n\nProvide your score, detailed reasoning, and recommended action (pursue, deprioritize, or disqualify).",
+      "inputs": ["output_prospect_profile"],
+      "knowledge_bases": ["kb_icp_criteria"],
+      "output": {
+        "id": "output_icp_score",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "score": { "type": "integer", "minimum": 1, "maximum": 10 },
+            "reasoning": { "type": "string" },
+            "recommended_action": {
+              "type": "string",
+              "enum": ["pursue", "deprioritize", "disqualify"]
+            },
+            "key_signals": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["score", "reasoning", "recommended_action"]
+        }
+      },
+      "timeout_minutes": 3,
+      "on_success": "gateway_icp_threshold",
+      "on_failure": "step_handle_scoring_failure",
+      "cost_config": {
+        "budget_usd": 0.10,
+        "track_tokens": true
+      }
+    },
+    {
+      "id": "gateway_icp_threshold",
+      "name": "ICP Score Gate",
+      "description": "Route based on ICP score",
+      "type": "gateway",
+      "gateway_type": "exclusive",
+      "conditions": [
+        {
+          "condition": "output_icp_score.score >= 7",
+          "next_step": "step_human_review"
+        },
+        {
+          "condition": "output_icp_score.score >= 4",
+          "next_step": "step_draft_outreach"
+        },
+        {
+          "condition": "output_icp_score.score < 4",
+          "next_step": "step_disqualify"
+        }
+      ],
+      "default_step": "step_disqualify"
+    },
+    {
+      "id": "step_human_review",
+      "name": "Human Review - High Value Prospect",
+      "description": "Sales rep reviews high-value prospect before outreach",
+      "type": "human_task",
+      "assigned_to": "role_sales_rep",
+      "inputs": ["output_prospect_profile", "output_icp_score"],
+      "interface": {
+        "type": "slack",
+        "channel": "#sales-high-value-leads",
+        "message_template": "High-value prospect flagged for review:\n\n*Company:* {input_company_domain}\n*Contact:* {input_contact_name}\n*ICP Score:* {output_icp_score.score}/10\n\n*Key Signals:*\n{output_icp_score.key_signals}\n\n*Reasoning:*\n{output_icp_score.reasoning}\n\nPlease review and approve for outreach or provide modifications.",
+        "form_schema": {
+          "type": "object",
+          "properties": {
+            "approved": { "type": "boolean" },
+            "modifications": { "type": "string" },
+            "custom_talking_points": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["approved"]
+        }
+      },
+      "output": {
+        "id": "output_human_review",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "approved": { "type": "boolean" },
+            "modifications": { "type": "string" },
+            "custom_talking_points": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["approved"]
+        }
+      },
+      "timeout_minutes": 1440,
+      "on_success": "step_draft_outreach",
+      "on_rejection": "step_disqualify",
+      "on_timeout": "step_escalate_timeout"
+    },
+    {
+      "id": "step_draft_outreach",
+      "name": "Draft Personalized Outreach",
+      "description": "Create a personalized email for the prospect",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Draft a personalized outreach email for {input_contact_name} at {input_company_domain}.\n\nRequirements:\n- Reference a specific pain point from the research\n- Mention relevant company news or context if available\n- Keep it under 150 words\n- Don't use generic SaaS marketing language\n- Be conversational and specific\n- Include a clear, low-commitment CTA\n\nIf human review provided custom talking points, incorporate them: {output_human_review.custom_talking_points}",
+      "tools_available": ["tool_email_send"],
+      "inputs": ["output_prospect_profile", "output_icp_score", "output_human_review"],
+      "knowledge_bases": ["kb_product_docs"],
+      "output": {
+        "id": "output_draft_email",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "subject": { "type": "string" },
+            "body": { "type": "string" },
+            "personalization_signals_used": { "type": "array", "items": { "type": "string" } }
+          },
+          "required": ["subject", "body"]
+        }
+      },
+      "requires_approval": {
+        "role": "role_sales_rep",
+        "type": "explicit"
+      },
+      "timeout_minutes": 5,
+      "on_success": "step_send_outreach",
+      "on_failure": "step_handle_draft_failure",
+      "cost_config": {
+        "budget_usd": 0.15,
+        "track_tokens": true
+      }
+    },
+    {
+      "id": "step_send_outreach",
+      "name": "Send Outreach Email",
+      "description": "Send the approved email and log to CRM",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Send the approved outreach email to {input_contact_email}.\nThen log the interaction in Salesforce with:\n- Activity type: Outreach Email\n- Full email content\n- ICP score and reasoning\n- Research summary",
+      "tools_available": ["tool_email_send", "tool_crm_write"],
+      "inputs": ["output_draft_email", "input_contact_email", "input_lead_id"],
+      "output": {
+        "id": "output_send_result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "email_sent": { "type": "boolean" },
+            "crm_updated": { "type": "boolean" },
+            "sent_at": { "type": "string", "format": "date-time" }
+          },
+          "required": ["email_sent", "crm_updated"]
+        }
+      },
+      "timeout_minutes": 2,
+      "on_success": "step_complete_success",
+      "on_failure": "step_handle_send_failure"
+    },
+    {
+      "id": "step_disqualify",
+      "name": "Disqualify and Archive",
+      "description": "Mark lead as disqualified in CRM",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Update the lead {input_lead_id} in Salesforce:\n- Status: Disqualified\n- Disqualification reason: Based on ICP score of {output_icp_score.score}\n- Notes: {output_icp_score.reasoning}",
+      "tools_available": ["tool_crm_write"],
+      "inputs": ["input_lead_id", "output_icp_score"],
+      "output": {
+        "id": "output_disqualify_result",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "updated": { "type": "boolean" }
+          }
+        }
+      },
+      "timeout_minutes": 2,
+      "on_success": "step_complete_disqualified"
+    },
+    {
+      "id": "step_handle_research_failure",
+      "name": "Handle Research Failure",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Research failed. Log the error and mark for manual review.",
+      "tools_available": ["tool_crm_write"],
+      "on_success": "step_complete_error"
+    },
+    {
+      "id": "step_handle_scoring_failure",
+      "name": "Handle Scoring Failure",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "ICP scoring failed. Escalate to human for manual scoring.",
+      "on_success": "step_human_review"
+    },
+    {
+      "id": "step_handle_draft_failure",
+      "name": "Handle Draft Failure",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Email drafting failed. Log error and notify sales rep.",
+      "on_success": "step_complete_error"
+    },
+    {
+      "id": "step_handle_send_failure",
+      "name": "Handle Send Failure",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Email send failed. Log error and notify for retry.",
+      "on_success": "step_complete_error"
+    },
+    {
+      "id": "step_escalate_timeout",
+      "name": "Escalate Timeout",
+      "type": "agent_task",
+      "assigned_to": "role_researcher",
+      "instructions": "Human review timed out after 24 hours. Notify manager and log.",
+      "on_success": "step_complete_error"
+    },
+    {
+      "id": "step_complete_success",
+      "name": "Complete - Success",
+      "type": "terminal",
+      "terminal_type": "success",
+      "final_output": {
+        "id": "output_final",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "const": "outreach_sent" },
+            "lead_id": { "type": "string" },
+            "icp_score": { "type": "integer" }
+          }
+        }
+      }
+    },
+    {
+      "id": "step_complete_disqualified",
+      "name": "Complete - Disqualified",
+      "type": "terminal",
+      "terminal_type": "success",
+      "final_output": {
+        "id": "output_final_disqualified",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "status": { "type": "string", "const": "disqualified" },
+            "lead_id": { "type": "string" },
+            "reason": { "type": "string" }
+          }
+        }
+      }
+    },
+    {
+      "id": "step_complete_error",
+      "name": "Complete - Error",
+      "type": "terminal",
+      "terminal_type": "failure"
+    }
+  ],
+
+  "cost": {
+    "budget": {
+      "per_step": {
+        "default_max_usd": 0.20,
+        "overrides": {
+          "step_research_prospect": 0.25
+        },
+        "on_overrun": "warn"
+      },
+      "per_run": {
+        "max_usd": 1.00,
+        "warn_at_percent": 80,
+        "on_overrun": "block",
+        "escalation_role": "role_sales_rep"
+      },
+      "per_month": {
+        "max_usd": 500.00,
+        "on_overrun": "escalate",
+        "reset_day": 1
+      }
+    },
+    "attribution": {
+      "team": "sales-ops",
+      "project": "lead-qualification-automation",
+      "cost_center": "CC-4021",
+      "environment": "production",
+      "tags": ["outbound", "qualification"]
+    },
+    "estimation": {
+      "enabled": true,
+      "run_before_execution": false,
+      "abort_if_exceeds_usd": 2.00
+    },
+    "reporting": {
+      "destination": "datadog",
+      "include_token_breakdown": true
+    }
+  },
+
+  "security": {
+    "data_classification": {
+      "level": "confidential",
+      "contains_pii": true,
+      "contains_phi": false,
+      "contains_financial": false,
+      "data_residency": ["us"],
+      "retention_days": 90
+    },
+    "access_control": {
+      "execute": {
+        "roles": ["sales-ops", "sales-rep"],
+        "require_mfa": false
+      },
+      "view_logs": {
+        "roles": ["sales-ops", "sales-manager", "audit"]
+      },
+      "modify": {
+        "roles": ["sales-ops-admin"],
+        "require_approval": true,
+        "approvers": ["security-team"]
+      }
+    },
+    "secrets": {
+      "provider": "aws_secrets_manager",
+      "namespace": "bpax/lead-qualification",
+      "rotation_days": 90,
+      "references": {
+        "TAVILY_API_KEY": "secret://bpax/tools/tavily",
+        "SALESFORCE_TOKEN": "secret://bpax/crm/salesforce",
+        "SENDGRID_API_KEY": "secret://bpax/email/sendgrid"
+      }
+    },
+    "network": {
+      "allowed_egress_domains": [
+        "api.anthropic.com",
+        "api.openai.com",
+        "api.tavily.com",
+        "login.salesforce.com",
+        "*.my.salesforce.com",
+        "api.sendgrid.com"
+      ],
+      "require_tls": true
+    },
+    "input_validation": {
+      "sanitize_inputs": true,
+      "max_input_length_chars": 10000,
+      "blocked_patterns": ["<script", "{{", "${"],
+      "on_violation": "reject"
+    },
+    "output_filtering": {
+      "redact_in_logs": ["email", "phone"],
+      "redact_pattern": "***REDACTED***"
+    }
+  },
+
+  "governance": {
+    "lifecycle": {
+      "status": "active",
+      "approval_required_to_deploy": true,
+      "approvers": ["sales-ops-lead@company.com", "security@company.com"],
+      "approved_by": "sales-ops-lead@company.com",
+      "approved_at": "2026-02-20T14:00:00Z",
+      "review_cycle_days": 90,
+      "next_review_date": "2026-05-20"
+    },
+    "compliance": {
+      "frameworks": ["GDPR", "CCPA"],
+      "data_processing_basis": "legitimate_interest",
+      "cross_border_transfer": false,
+      "human_oversight_required": true,
+      "human_oversight_justification": "All outreach emails require human approval before sending"
+    },
+    "change_management": {
+      "require_pr_review": true,
+      "min_reviewers": 1,
+      "auto_rollback_on_error_rate_percent": 20
+    },
+    "audit": {
+      "immutable_log": true,
+      "log_destination": "s3://company-audit-logs/bpax/lead-qualification",
+      "log_retention_years": 7,
+      "include_agent_reasoning": true,
+      "include_inputs": true,
+      "include_outputs": true,
+      "include_tool_calls": true,
+      "sign_log_entries": false
+    },
+    "sla": {
+      "max_duration_minutes": 60,
+      "on_breach": "notify",
+      "escalation_contact": "sales-ops-lead@company.com",
+      "p99_target_minutes": 30
+    }
+  },
+
+  "guardrails": [
+    {
+      "id": "guard_no_pii_logging",
+      "description": "Never log PII to external services or debug outputs",
+      "applies_to": "all_agents",
+      "enforcement": "hard_block",
+      "type": "pii_filter",
+      "on_violation": {
+        "log_level": "error",
+        "abort_process": false,
+        "notify_roles": ["role_sales_rep"]
+      }
+    },
+    {
+      "id": "guard_email_rate_limit",
+      "description": "Limit outreach emails to prevent spam",
+      "applies_to": ["role_researcher"],
+      "enforcement": "hard_block",
+      "type": "rate_limit",
+      "config": {
+        "max_emails_per_prospect_per_week": 3,
+        "max_emails_per_day": 50
+      },
+      "on_violation": {
+        "log_level": "warn",
+        "abort_process": true
+      }
+    },
+    {
+      "id": "guard_cost_cap",
+      "description": "Stop if LLM cost exceeds threshold",
+      "applies_to": "all_agents",
+      "enforcement": "hard_block",
+      "type": "cost_cap",
+      "config": {
+        "max_cost_usd": 1.00
+      },
+      "on_violation": {
+        "log_level": "error",
+        "abort_process": true,
+        "notify_roles": ["role_sales_rep"]
+      }
+    },
+    {
+      "id": "guard_content_filter",
+      "description": "Prevent inappropriate content in outreach",
+      "applies_to": ["step_draft_outreach"],
+      "enforcement": "hard_block",
+      "type": "content_filter",
+      "config": {
+        "blocked_topics": ["competitors", "pricing guarantees", "legal claims"],
+        "required_disclaimers": false
+      },
+      "on_violation": {
+        "log_level": "warn",
+        "abort_process": false,
+        "custom_handler": "step_handle_draft_failure"
+      }
+    }
+  ],
+
+  "error_handling": {
+    "default_on_unhandled": "escalate_to_human",
+    "default_escalation_role": "role_sales_rep",
+    "handlers": [
+      {
+        "id": "step_handler_api_error",
+        "name": "API Error Handler",
+        "type": "error_handler",
+        "handles_errors": ["api_timeout", "api_rate_limit", "api_auth_failed"],
+        "actions": [
+          { "action": "log", "config": { "level": "error" } },
+          { "action": "retry", "config": { "max_attempts": 3, "backoff": "exponential" } },
+          { "action": "notify", "config": { "channel": "slack", "target": "#sales-ops-alerts" } }
+        ]
+      },
+      {
+        "id": "step_handler_llm_error",
+        "name": "LLM Error Handler",
+        "type": "error_handler",
+        "handles_errors": ["llm_timeout", "llm_rate_limit", "llm_content_filter"],
+        "actions": [
+          { "action": "log", "config": { "level": "warn" } },
+          { "action": "retry", "config": { "max_attempts": 2 } },
+          { "action": "escalate", "config": { "to": "role_sales_rep" } }
+        ]
+      }
+    ]
+  },
+
+  "observability": {
+    "logging": {
+      "level": "decision",
+      "destination": "datadog",
+      "include_inputs": false,
+      "include_outputs": true,
+      "include_reasoning": true
+    },
+    "metrics": {
+      "enabled": true,
+      "provider": "datadog",
+      "collect": [
+        "step_duration",
+        "agent_confidence_score",
+        "human_intervention_rate",
+        "llm_cost_per_run",
+        "llm_tokens_per_step",
+        "process_success_rate",
+        "error_rate"
+      ]
+    },
+    "tracing": {
+      "enabled": true,
+      "provider": "langsmith",
+      "sample_rate": 1.0,
+      "propagate_context": true
+    }
+  }
+}

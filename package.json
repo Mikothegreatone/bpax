@@ -1,0 +1,33 @@
+{
+  "name": "bpax",
+  "version": "0.1.0-alpha",
+  "private": true,
+  "description": "BPAX - Business Process Agent eXchange",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bpax-io/bpax.git"
+  },
+  "license": "Apache-2.0",
+  "workspaces": [
+    "sdk/typescript",
+    "sdk/python",
+    "cli",
+    "translators/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "validate": "ajv validate -s spec/0.1-alpha/bpax.schema.json -d examples/*.bpax.json --spec=draft2020"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "prettier": "^3.2.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.3.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

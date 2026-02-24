@@ -1,0 +1,11 @@
+{
+  "id": "test-invalid",
+  "name": "Missing Version",
+  "steps": [
+    {
+      "id": "step_start",
+      "name": "Start",
+      "type": "terminal"
+    }
+  ]
+}

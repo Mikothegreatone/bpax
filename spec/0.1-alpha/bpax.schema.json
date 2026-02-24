@@ -1,0 +1,1358 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bpax.io/schema/0.1-alpha/bpax.schema.json",
+  "title": "BPAX 0.1-alpha",
+  "description": "Business Process Agent eXchange - A standard for converting business processes into agentic workflows",
+  "type": "object",
+  "required": ["bpax_version", "id", "name", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "bpax_version": {
+      "const": "0.1-alpha",
+      "description": "BPAX specification version"
+    },
+    "id": {
+      "$ref": "#/$defs/ProcessId",
+      "description": "Unique identifier for this process"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Human-readable process name"
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Detailed description of what this process accomplishes"
+    },
+    "version": {
+      "$ref": "#/$defs/SemVer",
+      "description": "Semantic version of this process document"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this process was created"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this process was last updated"
+    },
+    "author": {
+      "$ref": "#/$defs/Author",
+      "description": "Author information"
+    },
+    "metadata": {
+      "$ref": "#/$defs/Metadata",
+      "description": "Process classification and trigger configuration"
+    },
+    "roles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Role" },
+      "description": "Participants in this process (humans, agents, systems)"
+    },
+    "tools": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Tool" },
+      "description": "Capabilities available to agents"
+    },
+    "context": {
+      "$ref": "#/$defs/Context",
+      "description": "Inputs, memory, and knowledge bases"
+    },
+    "steps": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Step" },
+      "minItems": 1,
+      "description": "The workflow steps"
+    },
+    "cost": {
+      "$ref": "#/$defs/Cost",
+      "description": "Budget and cost tracking configuration"
+    },
+    "security": {
+      "$ref": "#/$defs/Security",
+      "description": "Security and access control configuration"
+    },
+    "governance": {
+      "$ref": "#/$defs/Governance",
+      "description": "Lifecycle, compliance, and audit configuration"
+    },
+    "guardrails": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Guardrail" },
+      "description": "Safety constraints and limits"
+    },
+    "error_handling": {
+      "$ref": "#/$defs/ErrorHandling",
+      "description": "Error handlers and escalation configuration"
+    },
+    "observability": {
+      "$ref": "#/$defs/Observability",
+      "description": "Logging, metrics, and tracing configuration"
+    }
+  },
+
+  "$defs": {
+    "ProcessId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,62}[a-z0-9]$",
+      "description": "Lowercase alphanumeric with underscores and hyphens, 2-64 chars"
+    },
+    "RoleId": {
+      "type": "string",
+      "pattern": "^role_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Role identifier, prefixed with role_"
+    },
+    "ToolId": {
+      "type": "string",
+      "pattern": "^tool_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Tool identifier, prefixed with tool_"
+    },
+    "StepId": {
+      "type": "string",
+      "pattern": "^step_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Step identifier, prefixed with step_"
+    },
+    "OutputId": {
+      "type": "string",
+      "pattern": "^output_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Output identifier, prefixed with output_"
+    },
+    "InputId": {
+      "type": "string",
+      "pattern": "^input_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Input identifier, prefixed with input_"
+    },
+    "GuardrailId": {
+      "type": "string",
+      "pattern": "^guard_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Guardrail identifier, prefixed with guard_"
+    },
+    "KnowledgeBaseId": {
+      "type": "string",
+      "pattern": "^kb_[a-z][a-z0-9_]{0,58}[a-z0-9]$",
+      "description": "Knowledge base identifier, prefixed with kb_"
+    },
+    "SemVer": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "Semantic version string"
+    },
+    "Author": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "organization": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "Metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": ["sales", "operations", "finance", "hr", "security", "engineering", "support", "legal", "custom"],
+          "description": "Business domain this process belongs to"
+        },
+        "trigger": {
+          "$ref": "#/$defs/Trigger",
+          "description": "How this process is initiated"
+        },
+        "criticality": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "default": "medium",
+          "description": "Business criticality level"
+        },
+        "estimated_duration_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Expected duration in minutes"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "uniqueItems": true,
+          "description": "Tags for categorization and search"
+        },
+        "_extensions": {
+          "type": "object",
+          "description": "Extension point for custom metadata"
+        }
+      }
+    },
+    "Trigger": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["manual", "scheduled", "event", "api", "webhook", "a2a_task"],
+          "description": "Trigger type"
+        },
+        "config": {
+          "type": "object",
+          "description": "Trigger-specific configuration",
+          "properties": {
+            "schedule": {
+              "type": "string",
+              "description": "Cron expression for scheduled triggers"
+            },
+            "event_type": {
+              "type": "string",
+              "description": "Event type for event triggers"
+            },
+            "api_endpoint": {
+              "type": "string",
+              "description": "API endpoint for api triggers"
+            },
+            "webhook_path": {
+              "type": "string",
+              "description": "Webhook path for webhook triggers"
+            },
+            "a2a_agent_card_uri": {
+              "type": "string",
+              "format": "uri",
+              "description": "A2A AgentCard URI for a2a_task triggers"
+            },
+            "a2a_accepted_input_modes": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["text/plain", "application/json"],
+              "description": "Accepted input modes for A2A"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    },
+
+    "Role": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/RoleId" },
+        "type": {
+          "type": "string",
+          "enum": ["human", "agent", "system", "external_agent"],
+          "description": "Role type"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable role name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Role description"
+        },
+        "responsibilities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of responsibilities"
+        },
+        "agent_config": {
+          "$ref": "#/$defs/AgentConfig",
+          "description": "Configuration for agent roles"
+        },
+        "human_config": {
+          "$ref": "#/$defs/HumanConfig",
+          "description": "Configuration for human roles"
+        },
+        "system_config": {
+          "$ref": "#/$defs/SystemConfig",
+          "description": "Configuration for system roles"
+        },
+        "external_agent_config": {
+          "$ref": "#/$defs/ExternalAgentConfig",
+          "description": "Configuration for external A2A agent roles"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "agent" } }, "required": ["type"] },
+          "then": { "required": ["agent_config"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "external_agent" } }, "required": ["type"] },
+          "then": { "required": ["external_agent_config"] }
+        }
+      ]
+    },
+    "AgentConfig": {
+      "type": "object",
+      "required": ["autonomy_level"],
+      "additionalProperties": false,
+      "properties": {
+        "model_preference": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered list of preferred models"
+        },
+        "autonomy_level": {
+          "type": "string",
+          "enum": ["full", "supervised", "human_in_loop"],
+          "description": "full: acts without confirmation; supervised: acts but logs; human_in_loop: pauses at checkpoints"
+        },
+        "system_prompt": {
+          "type": "string",
+          "description": "Base system prompt for this agent"
+        },
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "default": 0.7,
+          "description": "LLM temperature setting"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum tokens for response"
+        }
+      }
+    },
+    "HumanConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "notification_channel": {
+          "type": "string",
+          "enum": ["email", "slack", "teams", "sms", "web_ui"],
+          "description": "Preferred notification channel"
+        },
+        "escalation_contact": {
+          "type": "string",
+          "description": "Contact for escalation"
+        }
+      }
+    },
+    "SystemConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interface": {
+          "type": "string",
+          "enum": ["api", "database", "file", "queue"],
+          "description": "System interface type"
+        },
+        "connection_ref": {
+          "type": "string",
+          "description": "Reference to connection configuration"
+        }
+      }
+    },
+    "ExternalAgentConfig": {
+      "type": "object",
+      "required": ["agent_card_uri"],
+      "additionalProperties": false,
+      "description": "A2A Protocol external agent reference",
+      "properties": {
+        "agent_card_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "URI to the A2A AgentCard"
+        },
+        "required_skills": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Required capabilities"
+        },
+        "auth_scheme": {
+          "type": "string",
+          "enum": ["none", "api_key", "oauth2", "mtls"],
+          "description": "Authentication scheme"
+        },
+        "auth_secret_ref": {
+          "type": "string",
+          "description": "Reference to security.secrets for credentials"
+        }
+      }
+    },
+
+    "Tool": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/ToolId" },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable tool name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Tool description"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["api", "search", "database", "communication", "file", "mcp_tool", "custom"],
+          "description": "Tool type"
+        },
+        "mcp_server": {
+          "$ref": "#/$defs/McpServerReference",
+          "description": "Reference to MCP server providing this tool"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Tool provider (e.g., tavily, salesforce)"
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri-reference",
+          "description": "API endpoint"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+          "description": "HTTP method"
+        },
+        "input_schema": {
+          "type": "object",
+          "description": "JSON Schema for tool input"
+        },
+        "output_schema": {
+          "type": "object",
+          "description": "JSON Schema for expected output"
+        },
+        "auth": {
+          "$ref": "#/$defs/ToolAuth",
+          "description": "Authentication configuration"
+        },
+        "assigned_to": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RoleId" },
+          "description": "Which roles can use this tool"
+        },
+        "requires_approval": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "$ref": "#/$defs/ApprovalConfig" }
+          ],
+          "default": false,
+          "description": "Whether tool use requires approval"
+        },
+        "annotations": {
+          "$ref": "#/$defs/ToolAnnotations",
+          "description": "Behavioral hints"
+        },
+        "rate_limit": {
+          "$ref": "#/$defs/RateLimit",
+          "description": "Rate limiting configuration"
+        }
+      }
+    },
+    "McpServerReference": {
+      "type": "object",
+      "required": ["server_name", "tool_name"],
+      "additionalProperties": false,
+      "description": "Reference to a tool provided by an MCP server",
+      "properties": {
+        "server_name": {
+          "type": "string",
+          "description": "Name of the MCP server"
+        },
+        "tool_name": {
+          "type": "string",
+          "description": "Name of the tool within that server"
+        },
+        "server_uri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Optional URI for server discovery"
+        }
+      }
+    },
+    "ToolAuth": {
+      "type": "object",
+      "required": ["method"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["none", "api_key", "oauth2", "basic", "bearer", "mtls", "custom"],
+          "description": "Authentication method"
+        },
+        "secret_ref": {
+          "type": "string",
+          "description": "Reference to security.secrets key"
+        },
+        "oauth_config": {
+          "type": "object",
+          "properties": {
+            "token_url": { "type": "string", "format": "uri" },
+            "scopes": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "ToolAnnotations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Behavioral hints about the tool (MCP pattern)",
+      "properties": {
+        "read_only": {
+          "type": "boolean",
+          "description": "Tool does not modify state"
+        },
+        "destructive": {
+          "type": "boolean",
+          "description": "Tool may perform irreversible actions"
+        },
+        "idempotent": {
+          "type": "boolean",
+          "description": "Repeated calls produce same result"
+        },
+        "open_world": {
+          "type": "boolean",
+          "description": "Tool may access external systems"
+        }
+      }
+    },
+    "ApprovalConfig": {
+      "type": "object",
+      "required": ["role"],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "$ref": "#/$defs/RoleId" },
+        "type": {
+          "type": "string",
+          "enum": ["explicit", "implicit_timeout"],
+          "description": "explicit: must actively approve; implicit_timeout: auto-approved if not rejected"
+        },
+        "timeout_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Timeout for implicit approval"
+        }
+      }
+    },
+    "RateLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requests_per_minute": { "type": "integer", "minimum": 1 },
+        "requests_per_hour": { "type": "integer", "minimum": 1 },
+        "on_limit": {
+          "type": "string",
+          "enum": ["queue", "fail", "warn"],
+          "description": "Action when limit reached"
+        }
+      }
+    },
+
+    "Context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ContextInput" },
+          "description": "Process inputs"
+        },
+        "memory": {
+          "$ref": "#/$defs/MemoryConfig",
+          "description": "Memory configuration"
+        },
+        "knowledge_bases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/KnowledgeBase" },
+          "description": "Knowledge bases available to agents"
+        }
+      }
+    },
+    "ContextInput": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/InputId" },
+        "name": {
+          "type": "string",
+          "description": "Human-readable input name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "number", "boolean", "object", "array"],
+          "description": "Input data type"
+        },
+        "required": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether this input is required"
+        },
+        "schema": {
+          "type": "object",
+          "description": "JSON Schema for complex inputs"
+        },
+        "example": {
+          "description": "Example value"
+        },
+        "default": {
+          "description": "Default value"
+        },
+        "sensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "Mark as sensitive to trigger redaction"
+        }
+      }
+    },
+    "MemoryConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["persistent", "session", "none"],
+          "description": "Memory persistence type"
+        },
+        "store": {
+          "type": "string",
+          "enum": ["redis", "postgres", "dynamodb", "in_memory", "custom"],
+          "description": "Storage backend"
+        },
+        "keys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Keys to remember across steps"
+        },
+        "ttl_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Time to live in hours"
+        }
+      }
+    },
+    "KnowledgeBase": {
+      "type": "object",
+      "required": ["id", "type", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/KnowledgeBaseId" },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["rag", "vector_db", "structured_db", "api", "mcp_resource"],
+          "description": "Knowledge base type"
+        },
+        "source": {
+          "type": "string",
+          "description": "Source URI or path"
+        },
+        "mcp_server": {
+          "$ref": "#/$defs/McpServerReference",
+          "description": "MCP resource reference"
+        },
+        "relevance_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum relevance score"
+        },
+        "max_results": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum results to return"
+        }
+      }
+    },
+
+    "Step": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "oneOf": [
+        { "$ref": "#/$defs/AgentTaskStep" },
+        { "$ref": "#/$defs/HumanTaskStep" },
+        { "$ref": "#/$defs/GatewayStep" },
+        { "$ref": "#/$defs/TerminalStep" }
+      ]
+    },
+    "StepBase": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/StepId" },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable step name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Step description"
+        }
+      }
+    },
+    "AgentTaskStep": {
+      "type": "object",
+      "required": ["id", "name", "type", "assigned_to", "instructions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/StepId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "type": { "const": "agent_task" },
+        "assigned_to": {
+          "$ref": "#/$defs/RoleId",
+          "description": "Role assigned to this step"
+        },
+        "instructions": {
+          "type": "string",
+          "description": "Natural language instructions. Supports {variable} interpolation."
+        },
+        "tools_available": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ToolId" },
+          "description": "Tools available for this step"
+        },
+        "inputs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "References to context inputs or previous outputs"
+        },
+        "knowledge_bases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/KnowledgeBaseId" },
+          "description": "Knowledge bases to query"
+        },
+        "output": {
+          "$ref": "#/$defs/StepOutput",
+          "description": "Expected output"
+        },
+        "confidence": {
+          "$ref": "#/$defs/ConfidenceConfig",
+          "description": "Confidence threshold configuration"
+        },
+        "requires_approval": {
+          "oneOf": [
+            { "type": "boolean" },
+            { "$ref": "#/$defs/ApprovalConfig" }
+          ],
+          "description": "Whether output requires approval"
+        },
+        "timeout_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 30,
+          "description": "Step timeout"
+        },
+        "retry": {
+          "$ref": "#/$defs/RetryConfig",
+          "description": "Retry configuration"
+        },
+        "on_success": {
+          "$ref": "#/$defs/StepId",
+          "description": "Next step on success"
+        },
+        "on_failure": {
+          "$ref": "#/$defs/StepId",
+          "description": "Next step on failure"
+        },
+        "on_timeout": {
+          "$ref": "#/$defs/StepId",
+          "description": "Next step on timeout"
+        },
+        "cost_config": {
+          "$ref": "#/$defs/StepCostConfig",
+          "description": "Per-step cost configuration"
+        }
+      }
+    },
+    "HumanTaskStep": {
+      "type": "object",
+      "required": ["id", "name", "type", "assigned_to"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/StepId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "type": { "const": "human_task" },
+        "assigned_to": { "$ref": "#/$defs/RoleId" },
+        "inputs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Data to present to human"
+        },
+        "interface": {
+          "$ref": "#/$defs/HumanInterface",
+          "description": "Interface configuration"
+        },
+        "output": {
+          "$ref": "#/$defs/StepOutput",
+          "description": "Expected human response"
+        },
+        "timeout_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Time to wait for human response"
+        },
+        "on_success": { "$ref": "#/$defs/StepId" },
+        "on_rejection": { "$ref": "#/$defs/StepId" },
+        "on_timeout": { "$ref": "#/$defs/StepId" }
+      }
+    },
+    "GatewayStep": {
+      "type": "object",
+      "required": ["id", "name", "type", "conditions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/StepId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "type": { "const": "gateway" },
+        "gateway_type": {
+          "type": "string",
+          "enum": ["exclusive", "parallel", "inclusive"],
+          "default": "exclusive",
+          "description": "exclusive: one path; parallel: all paths; inclusive: one or more"
+        },
+        "conditions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/GatewayCondition" },
+          "minItems": 1,
+          "description": "Routing conditions"
+        },
+        "default_step": {
+          "$ref": "#/$defs/StepId",
+          "description": "Step if no conditions match"
+        }
+      }
+    },
+    "TerminalStep": {
+      "type": "object",
+      "required": ["id", "name", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/StepId" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "type": { "const": "terminal" },
+        "terminal_type": {
+          "type": "string",
+          "enum": ["success", "failure", "cancelled"],
+          "default": "success",
+          "description": "Terminal state type"
+        },
+        "final_output": {
+          "$ref": "#/$defs/StepOutput",
+          "description": "Final process output schema"
+        }
+      }
+    },
+    "GatewayCondition": {
+      "type": "object",
+      "required": ["condition", "next_step"],
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "type": "string",
+          "description": "Expression to evaluate (e.g., 'output_score.value >= 7')"
+        },
+        "next_step": { "$ref": "#/$defs/StepId" }
+      }
+    },
+    "StepOutput": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/OutputId" },
+        "schema": {
+          "type": "object",
+          "description": "JSON Schema for output structure"
+        },
+        "required": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether output is required"
+        }
+      }
+    },
+    "ConfidenceConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum confidence to proceed"
+        },
+        "on_low_confidence": {
+          "type": "string",
+          "enum": ["escalate_to_human", "retry", "fail", "proceed_with_warning"],
+          "description": "Action when confidence is below threshold"
+        },
+        "escalation_role": { "$ref": "#/$defs/RoleId" }
+      }
+    },
+    "HumanInterface": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["slack", "email", "web_ui", "teams", "api", "custom"],
+          "description": "Interface type"
+        },
+        "channel": {
+          "type": "string",
+          "description": "Channel identifier (e.g., #channel, email address)"
+        },
+        "message_template": {
+          "type": "string",
+          "description": "Template for notification message"
+        },
+        "form_schema": {
+          "type": "object",
+          "description": "JSON Schema for structured input form"
+        }
+      }
+    },
+    "RetryConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Maximum retry attempts"
+        },
+        "backoff": {
+          "type": "string",
+          "enum": ["none", "linear", "exponential"],
+          "default": "exponential",
+          "description": "Backoff strategy"
+        },
+        "initial_delay_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 5,
+          "description": "Initial delay between retries"
+        },
+        "max_delay_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 300,
+          "description": "Maximum delay between retries"
+        },
+        "on_exhausted": {
+          "$ref": "#/$defs/StepId",
+          "description": "Step when retries exhausted"
+        }
+      }
+    },
+    "StepCostConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "budget_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Maximum budget for this step"
+        },
+        "track_tokens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to track token usage"
+        },
+        "on_overrun": {
+          "type": "string",
+          "enum": ["warn", "block", "escalate"],
+          "description": "Action when budget exceeded"
+        }
+      }
+    },
+
+    "Cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "per_step": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "default_max_usd": { "type": "number", "minimum": 0 },
+                "overrides": {
+                  "type": "object",
+                  "additionalProperties": { "type": "number", "minimum": 0 },
+                  "description": "Step-specific budget overrides"
+                },
+                "on_overrun": { "type": "string", "enum": ["warn", "block", "escalate"] }
+              }
+            },
+            "per_run": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "max_usd": { "type": "number", "minimum": 0 },
+                "warn_at_percent": { "type": "integer", "minimum": 1, "maximum": 100 },
+                "on_overrun": { "type": "string", "enum": ["warn", "block", "escalate"] },
+                "escalation_role": { "$ref": "#/$defs/RoleId" }
+              }
+            },
+            "per_month": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "max_usd": { "type": "number", "minimum": 0 },
+                "on_overrun": { "type": "string", "enum": ["warn", "block", "escalate"] },
+                "reset_day": { "type": "integer", "minimum": 1, "maximum": 28 }
+              }
+            }
+          }
+        },
+        "attribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "team": { "type": "string" },
+            "project": { "type": "string" },
+            "cost_center": { "type": "string" },
+            "environment": { "type": "string", "enum": ["production", "staging", "development", "test"] },
+            "tags": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "estimation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": false },
+            "run_before_execution": { "type": "boolean", "default": false },
+            "abort_if_exceeds_usd": { "type": "number", "minimum": 0 }
+          }
+        },
+        "reporting": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "destination": { "type": "string", "enum": ["datadog", "custom_webhook", "s3", "none"] },
+            "webhook_url": { "type": "string", "format": "uri" },
+            "include_token_breakdown": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    },
+
+    "Security": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "data_classification": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "level": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] },
+            "contains_pii": { "type": "boolean", "default": false },
+            "contains_phi": { "type": "boolean", "default": false },
+            "contains_financial": { "type": "boolean", "default": false },
+            "data_residency": { "type": "array", "items": { "type": "string" } },
+            "retention_days": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "access_control": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "execute": { "$ref": "#/$defs/AccessRule" },
+            "view_logs": { "$ref": "#/$defs/AccessRule" },
+            "modify": { "$ref": "#/$defs/AccessRule" },
+            "delete": { "$ref": "#/$defs/AccessRule" }
+          }
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "provider": { "type": "string", "enum": ["aws_secrets_manager", "hashicorp_vault", "azure_keyvault", "gcp_secret_manager", "env"] },
+            "namespace": { "type": "string" },
+            "rotation_days": { "type": "integer", "minimum": 1 },
+            "references": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowed_egress_domains": { "type": "array", "items": { "type": "string" } },
+            "require_tls": { "type": "boolean", "default": true },
+            "proxy": { "type": "string", "format": "uri" }
+          }
+        },
+        "input_validation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "sanitize_inputs": { "type": "boolean", "default": true },
+            "max_input_length_chars": { "type": "integer", "minimum": 1 },
+            "blocked_patterns": { "type": "array", "items": { "type": "string" } },
+            "on_violation": { "type": "string", "enum": ["reject", "sanitize", "flag"] }
+          }
+        },
+        "output_filtering": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "redact_in_logs": { "type": "array", "items": { "type": "string" } },
+            "redact_pattern": { "type": "string", "default": "***REDACTED***" }
+          }
+        }
+      }
+    },
+    "AccessRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "require_mfa": { "type": "boolean", "default": false },
+        "require_approval": { "type": "boolean", "default": false },
+        "approvers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "Governance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": { "type": "string", "enum": ["draft", "review", "approved", "active", "deprecated", "archived"] },
+            "approval_required_to_deploy": { "type": "boolean", "default": true },
+            "approvers": { "type": "array", "items": { "type": "string" } },
+            "approved_by": { "type": "string" },
+            "approved_at": { "type": "string", "format": "date-time" },
+            "review_cycle_days": { "type": "integer", "minimum": 1 },
+            "next_review_date": { "type": "string", "format": "date" }
+          }
+        },
+        "compliance": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "frameworks": { "type": "array", "items": { "type": "string", "enum": ["SOC2", "GDPR", "HIPAA", "ISO27001", "PCI_DSS", "CCPA", "EU_AI_ACT"] } },
+            "data_processing_basis": { "type": "string", "enum": ["legitimate_interest", "consent", "contract", "legal_obligation"] },
+            "cross_border_transfer": { "type": "boolean", "default": false },
+            "human_oversight_required": { "type": "boolean", "default": true },
+            "human_oversight_justification": { "type": "string" }
+          }
+        },
+        "change_management": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "require_pr_review": { "type": "boolean", "default": true },
+            "min_reviewers": { "type": "integer", "minimum": 1 },
+            "auto_rollback_on_error_rate_percent": { "type": "integer", "minimum": 1, "maximum": 100 },
+            "canary_deployment": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": { "type": "boolean", "default": false },
+                "percent_traffic": { "type": "integer", "minimum": 1, "maximum": 100 },
+                "evaluation_period_minutes": { "type": "integer", "minimum": 1 }
+              }
+            }
+          }
+        },
+        "audit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "immutable_log": { "type": "boolean", "default": true },
+            "log_destination": { "type": "string" },
+            "log_retention_years": { "type": "integer", "minimum": 1 },
+            "include_agent_reasoning": { "type": "boolean", "default": true },
+            "include_inputs": { "type": "boolean", "default": true },
+            "include_outputs": { "type": "boolean", "default": true },
+            "include_tool_calls": { "type": "boolean", "default": true },
+            "sign_log_entries": { "type": "boolean", "default": false }
+          }
+        },
+        "sla": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_duration_minutes": { "type": "integer", "minimum": 1 },
+            "on_breach": { "type": "string", "enum": ["notify", "escalate", "abort"] },
+            "escalation_contact": { "type": "string" },
+            "p99_target_minutes": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+
+    "Guardrail": {
+      "type": "object",
+      "required": ["id", "description", "enforcement"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/GuardrailId" },
+        "description": { "type": "string" },
+        "applies_to": {
+          "oneOf": [
+            { "const": "all_agents" },
+            { "const": "all_steps" },
+            { "type": "array", "items": { "type": "string" } }
+          ],
+          "description": "What this guardrail applies to"
+        },
+        "enforcement": {
+          "type": "string",
+          "enum": ["hard_block", "soft_warn"],
+          "description": "hard_block: prevents action; soft_warn: logs and proceeds"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["pii_filter", "content_filter", "rate_limit", "cost_cap", "output_validation", "custom"],
+          "description": "Guardrail type"
+        },
+        "config": {
+          "type": "object",
+          "description": "Type-specific configuration"
+        },
+        "on_violation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "notify_roles": { "type": "array", "items": { "$ref": "#/$defs/RoleId" } },
+            "log_level": { "type": "string", "enum": ["debug", "info", "warn", "error", "critical"] },
+            "abort_process": { "type": "boolean" },
+            "custom_handler": { "$ref": "#/$defs/StepId" }
+          }
+        }
+      }
+    },
+
+    "ErrorHandling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "default_on_unhandled": {
+          "type": "string",
+          "enum": ["escalate_to_human", "fail", "retry", "ignore"],
+          "default": "escalate_to_human",
+          "description": "Default action for unhandled errors"
+        },
+        "default_escalation_role": { "$ref": "#/$defs/RoleId" },
+        "handlers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ErrorHandler" },
+          "description": "Error handlers"
+        }
+      }
+    },
+    "ErrorHandler": {
+      "type": "object",
+      "required": ["id", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/StepId" },
+        "name": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["error_handler", "escalation", "compensation"],
+          "description": "Handler type"
+        },
+        "handles_errors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Error types this handler catches"
+        },
+        "actions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ErrorAction" },
+          "description": "Actions to take"
+        }
+      }
+    },
+    "ErrorAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["log", "notify", "retry", "escalate", "abort", "compensate", "goto_step"],
+          "description": "Action type"
+        },
+        "config": {
+          "type": "object",
+          "description": "Action-specific configuration"
+        }
+      }
+    },
+
+    "Observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "logging": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["step", "decision", "tool_call", "full"],
+              "default": "step",
+              "description": "Logging verbosity level"
+            },
+            "destination": {
+              "type": "string",
+              "enum": ["stdout", "datadog", "loki", "cloudwatch", "custom"],
+              "description": "Log destination"
+            },
+            "custom_endpoint": { "type": "string", "format": "uri" },
+            "include_inputs": { "type": "boolean", "default": false },
+            "include_outputs": { "type": "boolean", "default": true },
+            "include_reasoning": { "type": "boolean", "default": false }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "provider": { "type": "string", "enum": ["prometheus", "datadog", "cloudwatch", "otlp", "custom"] },
+            "collect": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["step_duration", "agent_confidence_score", "human_intervention_rate", "llm_cost_per_run", "llm_tokens_per_step", "process_success_rate", "error_rate", "retry_rate"]
+              }
+            }
+          }
+        },
+        "tracing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "provider": { "type": "string", "enum": ["langsmith", "langfuse", "opentelemetry", "datadog_apm", "custom"] },
+            "sample_rate": { "type": "number", "minimum": 0, "maximum": 1, "default": 1 },
+            "propagate_context": { "type": "boolean", "default": true }
+          }
+        }
+      }
+    }
+  }
+}

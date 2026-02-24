@@ -1,0 +1,54 @@
+{
+  "bpax_version": "0.1-alpha",
+  "id": "hello-world",
+  "name": "Hello World Workflow",
+  "description": "Minimal BPAX workflow demonstrating basic structure",
+  "version": "1.0.0",
+  "metadata": {
+    "domain": "custom",
+    "trigger": {
+      "type": "manual"
+    },
+    "criticality": "low",
+    "tags": ["example", "minimal"]
+  },
+  "roles": [
+    {
+      "id": "role_assistant",
+      "type": "agent",
+      "name": "Assistant Agent",
+      "description": "A helpful assistant that greets users",
+      "agent_config": {
+        "autonomy_level": "full",
+        "temperature": 0.7
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "step_greet",
+      "name": "Greet User",
+      "description": "Generate a friendly greeting",
+      "type": "agent_task",
+      "assigned_to": "role_assistant",
+      "instructions": "Greet the user warmly and ask how you can help them today.",
+      "output": {
+        "id": "output_greeting",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "message": { "type": "string" }
+          },
+          "required": ["message"]
+        }
+      },
+      "on_success": "step_complete"
+    },
+    {
+      "id": "step_complete",
+      "name": "Complete",
+      "type": "terminal",
+      "terminal_type": "success"
+    }
+  ]
+}

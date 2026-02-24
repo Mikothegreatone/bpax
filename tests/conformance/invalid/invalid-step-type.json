@@ -1,0 +1,12 @@
+{
+  "bpax_version": "0.1-alpha",
+  "id": "test-invalid",
+  "name": "Invalid Step Type",
+  "steps": [
+    {
+      "id": "step_start",
+      "name": "Start",
+      "type": "invalid_type"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+packages:
+  - "sdk/typescript"
+  - "sdk/python"
+  - "cli"
+  - "translators/*"

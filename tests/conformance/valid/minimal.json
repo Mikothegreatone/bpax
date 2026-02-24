@@ -1,0 +1,12 @@
+{
+  "bpax_version": "0.1-alpha",
+  "id": "test-minimal",
+  "name": "Minimal Test",
+  "steps": [
+    {
+      "id": "step_start",
+      "name": "Start",
+      "type": "terminal"
+    }
+  ]
+}
